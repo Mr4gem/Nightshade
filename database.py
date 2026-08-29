@@ -1,8 +1,8 @@
- import aiosqlite
+import aiosqlite
 
-  DB_PATH = "nightshade.db"
+DB_PATH = "nightshade.db"
 
-  async def init_db():
+async def init_db():
       async with aiosqlite.connect(DB_PATH) as db:
           await db.executescript("""
               CREATE TABLE IF NOT EXISTS warnings (
