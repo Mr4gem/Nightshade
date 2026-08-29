@@ -5,7 +5,7 @@ import asyncio
 from dotenv import load_dotenv
 from database import init_db
 
-  load_dotenv()
+load_dotenv()
 
   intents = discord.Intents.all()
   bot = commands.Bot(command_prefix="!", intents=intents)
