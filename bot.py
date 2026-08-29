@@ -1,33 +1,27 @@
 import discord
-from discord import app_commands
-import os
-from dotenv import load_dotenv
+  from discord.ext import commands
+  import os
+  import asyncio
+  from dotenv import load_dotenv
+  from database import init_db
 
-load_dotenv()
+  load_dotenv()
 
-intents = discord.Intents.default()
-client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
+  intents = discord.Intents.all()
+  bot = commands.Bot(command_prefix="!", intents=intents)
 
+  COGS = ["moderation", "fun", "leveling", "economy", "utility", "personality"]
 
-@tree.command(name="ping", description="Check if the bot is alive")
-async def ping(interaction: discord.Interaction):
-    latency = round(client.latency * 1000)
-    await interaction.response.send_message(f"Pong! `{latency}ms`")
+  @bot.event
+  async def on_ready():
+      await bot.tree.sync()
+      print(f"Nightshade online as {bot.user} (ID: {bot.user.id})")
 
+  async def main():
+      await init_db()
+      async with bot:
+          for cog in COGS:
+              await bot.load_extension(f"cogs.{cog}")
+          await bot.start(os.getenv("DISCORD_TOKEN"))
 
-@tree.command(name="hello", description="Say hello to someone")
-@app_commands.describe(user="The user to greet (optional)")
-async def hello(interaction: discord.Interaction, user: discord.Member = None):
-    target = user or interaction.user
-    await interaction.response.send_message(f"Hello, {target.mention}!")
-
-
-@client.event
-async def on_ready():
-    await tree.sync()
-    print(f"Logged in as {client.user} (ID: {client.user.id})")
-    print("Slash commands synced globally.")
-
-
-client.run(os.getenv("DISCORD_TOKEN"))
+  asyncio.run(main())
