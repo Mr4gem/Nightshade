@@ -1,0 +1,127 @@
+import discord
+  from discord import app_commands
+  from discord.ext import commands
+  import random
+  import asyncio
+
+  EIGHT_BALL = [
+      "It is certain.", "It is decidedly so.", "Without a doubt.", "Yes, definitely.",
+      "Most likely.", "Outlook good.", "Signs point to yes.", "Reply hazy, try again.",
+      "Ask again later.", "Cannot predict now.", "Don't count on it.", "My reply is no.",
+      "Outlook not so good.", "Very doubtful.", "My sources say no."
+  ]
+
+  TRIVIA = [
+      {"q": "What is the capital of France?", "a": "paris"},
+      {"q": "How many sides does a hexagon have?", "a": "6"},
+      {"q": "What planet is known as the Red Planet?", "a": "mars"},
+      {"q": "Who painted the Mona Lisa?", "a": "da vinci"},
+      {"q": "What is the largest ocean on Earth?", "a": "pacific"},
+      {"q": "How many continents are there?", "a": "7"},
+      {"q": "What gas do plants absorb from the atmosphere?", "a": "carbon dioxide"},
+      {"q": "What is the chemical symbol for gold?", "a": "au"},
+      {"q": "In what year did World War II end?", "a": "1945"},
+      {"q": "What is the fastest land animal?", "a": "cheetah"},
+  ]
+
+  SLOTS = ["🍒", "🍋", "🍊", "⭐", "💎", "🌸"]
+
+  class Fun(commands.Cog):
+      def __init__(self, bot):
+          self.bot = bot
+          self.active_trivia = {}
+
+      @app_commands.command(name="8ball", description="Ask the magic 8 ball")
+      @app_commands.describe(question="Your question")
+      async def eight_ball(self, interaction: discord.Interaction, question: str):
+          embed = discord.Embed(color=0x2b2d31)
+          embed.add_field(name="Question", value=question, inline=False)
+          embed.add_field(name="The 8-Ball Says...", value=f"*{random.choice(EIGHT_BALL)}*", inline=False)
+          await interaction.response.send_message(embed=embed)
+
+      @app_commands.command(name="rps", description="Play rock, paper, scissors")
+      @app_commands.choices(choice=[
+          app_commands.Choice(name="Rock", value="rock"),
+          app_commands.Choice(name="Paper", value="paper"),
+          app_commands.Choice(name="Scissors", value="scissors"),
+      ])
+      async def rps(self, interaction: discord.Interaction, choice: app_commands.Choice[str]):
+          bot_choice = random.choice(["rock", "paper", "scissors"])
+          emojis = {"rock": "🪨", "paper": "📄", "scissors": "✂️"}
+          wins = {("rock", "scissors"), ("scissors", "paper"), ("paper", "rock")}
+          user = choice.value
+          if user == bot_choice:
+              result, color = "It's a tie!", 0xffa500
+          elif (user, bot_choice) in wins:
+              result, color = "You win!", 0x00ff00
+          else:
+              result, color = "Nightshade wins.", 0xff4444
+          embed = discord.Embed(title="Rock, Paper, Scissors", color=color)
+          embed.add_field(name="You", value=f"{emojis[user]} {user.capitalize()}")
+          embed.add_field(name="Nightshade", value=f"{emojis[bot_choice]} {bot_choice.capitalize()}")
+          embed.add_field(name="Result", value=result, inline=False)
+          await interaction.response.send_message(embed=embed)
+
+      @app_commands.command(name="slots", description="Spin the slot machine")
+      async def slots(self, interaction: discord.Interaction):
+          reels = [random.choice(SLOTS) for _ in range(3)]
+          display = " | ".join(reels)
+          if reels[0] == reels[1] == reels[2]:
+              result, color = "JACKPOT! 🎉 Three of a kind!", 0xffd700
+          elif len(set(reels)) < 3:
+              result, color = "Two of a kind — not bad.", 0x00ff00
+          else:
+              result, color = "No match. Better luck next time.", 0xff4444
+          embed = discord.Embed(title="🎰 Slot Machine", color=color)
+          embed.add_field(name="Reels", value=display, inline=False)
+          embed.add_field(name="Outcome", value=result, inline=False)
+          await interaction.response.send_message(embed=embed)
+
+      @app_commands.command(name="trivia", description="Answer a trivia question")
+      async def trivia(self, interaction: discord.Interaction):
+          if interaction.channel_id in self.active_trivia:
+              return await interaction.response.send_message("There's already an active trivia question here!",
+  ephemeral=True)
+
+          q = random.choice(TRIVIA)
+          self.active_trivia[interaction.channel_id] = q["a"]
+          embed = discord.Embed(title="Trivia Time!", description=q["q"], color=0x7c3aed)
+          embed.set_footer(text="Type your answer in chat — 30 seconds!")
+          await interaction.response.send_message(embed=embed)
+
+          def check(m):
+              return m.channel.id == interaction.channel_id and not m.author.bot
+
+          try:
+              msg = await self.bot.wait_for("message", check=check, timeout=30.0)
+              answer = self.active_trivia.pop(interaction.channel_id, None)
+              if answer and msg.content.lower().strip() == answer:
+                  await msg.reply(f"Correct! The answer was **{answer}**. Well done, {msg.author.mention}!")
+              else:
+                  await msg.reply(f"Wrong! The correct answer was **{answer}**.")
+          except asyncio.TimeoutError:
+              answer = self.active_trivia.pop(interaction.channel_id, None)
+              await interaction.channel.send(f"Time's up! The answer was **{answer}**.")
+
+      @app_commands.command(name="poll", description="Create a poll")
+      @app_commands.describe(question="Poll question", options="Comma-separated options (2-9)")
+      async def poll(self, interaction: discord.Interaction, question: str, options: str):
+          option_list = [o.strip() for o in options.split(",") if o.strip()][:9]
+          if len(option_list) < 2:
+              return await interaction.response.send_message("Provide at least 2 comma-separated options.",
+  ephemeral=True)
+          number_emojis = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"]
+          description = "\n".join(f"{number_emojis[i]} {opt}" for i, opt in enumerate(option_list))
+          embed = discord.Embed(title=f"📊 {question}", description=description, color=0x7c3aed)
+          embed.set_footer(text=f"Poll by {interaction.user.display_name}")
+          await interaction.response.send_message(embed=embed)
+          msg = await interaction.original_response()
+          for i in range(len(option_list)):
+              await msg.add_reaction(number_emojis[i])
+
+      @app_commands.command(name="coinflip", description="Flip a coin")
+      async def coinflip(self, interaction: discord.Interaction):
+          await interaction.response.send_message(f"🪙 **{random.choice(['Heads', 'Tails'])}!**")
+
+  async def setup(bot):
+      await bot.add_cog(Fun(bot))
