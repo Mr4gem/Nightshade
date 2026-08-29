@@ -1,9 +1,9 @@
 import discord
-  from discord.ext import commands
-  import os
-  import asyncio
-  from dotenv import load_dotenv
-  from database import init_db
+from discord.ext import commands
+import os
+import asyncio
+from dotenv import load_dotenv
+from database import init_db
 
   load_dotenv()
 
